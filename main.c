@@ -12,9 +12,11 @@
 
 uint8_t read_packet(struct packet* pack);
 
+uint8_t cheack_packet(const struct packet* pack, const struct rule* rl);
+
 uint32_t get_bin_ip(const char* str); 
 
-void get_standart_ip(const uint32_t ip, char *ch_ip);
+char* get_standart_ip(const uint32_t ip);
 
 enum protocol pars_type_protocol(const char* prot);
 
@@ -24,7 +26,7 @@ int main(void)
 {
   struct node* data_base;
   
-//  struct packet pack = {0};
+  struct packet pack = {0};
   
   data_base = read_data_base_from_file();
   if (data_base == NULL)
@@ -32,23 +34,25 @@ int main(void)
     printf("Can't read data_base\n");
     return 0;
   }
-
-  struct node *temp = data_base;
-  char* str = malloc(sizeof(char) * 32);
-  printf("%s\n", data_base->next->rl.response);
-  while (temp != NULL)
+  
+  while (read_packet(&pack))
   {
-    get_standart_ip(temp->rl.pack.ip_src.s_addr, str);
+    uint8_t is_drop = 1;
+    struct node *temp = data_base;
+    while (temp != NULL)
+    {
+      if (cheack_packet(&pack, &temp->rl))
+      {
+        printf("%s\n", temp->rl.response);
+        is_drop = 0;
+        break;
+      }
+      temp = temp->next;
+    }
     
-    printf("%s %s\n", str, temp->rl.response);
-        
-    temp = temp->next;
+    if (is_drop)  printf("DRPOP\n");
   }
 
-
-  //read_packet(&pack);
-  //printf("%d\n", pack.mask_src);
-  //printf("%d\n", pack.mask_des);
   return 0;
 }
 
@@ -78,15 +82,42 @@ uint8_t read_packet(struct packet  *pack)
   
   scanf("%u %u %u", &u32_buf[0], &u32_buf[1], &u32_buf[2]);
 
+  
+  
   pack->port_src = u32_buf[0];
   pack->port_des = u32_buf[1];
   pack->prot = u32_buf[2]; 
 
-  return 0;
+  return 1;
 }
 
-void get_standart_ip(const uint32_t ip, char *ch_ip)
+uint8_t cheack_packet(const struct packet* pack, const struct rule* rl)
 {
+  if (rl->pack.ip_src.s_addr)
+  {
+    //printf("%b mask: %b != %b mask: %b\n", rl->pack.ip_src.s_addr, rl->pack.mask_src, pack->ip_src.s_addr, pack->mask_src);
+    if ((rl->pack.ip_src.s_addr & rl->pack.mask_src) != (pack->ip_src.s_addr & pack->mask_src))
+      return 0;
+  }
+  
+  if (rl->pack.ip_des.s_addr)
+  {
+    if ((rl->pack.ip_des.s_addr & rl->pack.mask_des) != (pack->ip_des.s_addr & pack->mask_des))
+      return 0;
+  }
+
+  if (rl->pack.prot)
+  {
+    if (rl->pack.prot != pack->prot)
+      return 0;
+  }
+  
+  return 1;
+}
+
+char* get_standart_ip(const uint32_t ip)
+{
+  char *ch_ip = malloc(sizeof(char) * 32);
   uint8_t buf[4];
   
   buf[0] = (uint8_t) (ip >> 24);
@@ -94,7 +125,7 @@ void get_standart_ip(const uint32_t ip, char *ch_ip)
   buf[2] = (uint8_t) (ip >> 8);
   buf[3] = (uint8_t) (ip); 
   sprintf(ch_ip, "%hhu.%hhu.%hhu.%hhu", buf[0], buf[1], buf[2], buf[3]);
-  
+  return ch_ip;
 }
 
 enum protocol pars_type_protocol(const char* prot)
@@ -122,7 +153,8 @@ struct node* read_data_base_from_file()
   uint8_t new_rl = 1;
   while (fscanf(f, "%s", buf) != EOF)
   {
-   //printf("%s\n", buf);
+    memset(u8_buf, 0, 8);
+    
     if (new_rl)
       {
         rl = malloc(sizeof(struct rule));
@@ -166,7 +198,7 @@ struct node* read_data_base_from_file()
       //printf("%s\n", rl->response);
     }
  } 
-  printf("%s\n", head->next->rl.response);
+  
 
   fclose(f);
   return head;
