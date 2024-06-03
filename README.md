@@ -22,10 +22,77 @@ Test 3 проверяет пакеты с протоколами ftp и ntp
 
 База данных:
 
-![image](https://github.com/OrionKropt/ideco-firewall/assets/111301727/16f18893-ab8f-4136-90cb-5e45c5877577)
+```
+src: 10.0.1.11  	dst: 1.1.1.1 	proto: tcp 	=> ACCEPT
+
+src: 10.1.2.12  	dst: 1.1.1.1 	proto: tcp 	=> DROP
+
+src: 10.0.2.12  	dst: 8.8.8.8 	proto: tcp	=> ACCEPT
+
+src: 10.0.3.13 	none			none		=> ACCEPT
+
+none 			dst: 1.2.3.4 	proto: udp	=> DROP
+
+none 			dst: 1.2.3.4	none		=> ACCEPT
+
+none 			dst: 10.0.9.1	proto: tcp	=> DROP
+
+src: 10.0.5.0/24 	none			none		=> ACCEPT
+
+src: 128.2.2.1	dst: 64.64.64.64	proto: ftp	=> ACCEPT
+
+src: 128.2.1.2	none			proto: ntp  => ACCEPT
+
+none			dst: 1.64.64.64	proto: ntp	=> DROP
+```
 
 
 Вывод:
 
-![image](https://github.com/OrionKropt/ideco-firewall/assets/111301727/b09792fc-1f16-4819-892e-dae5471d47e1)
+Test 1 Console input
 
+```
+packet: 10.0.1.11 1.1.1.1 6 => ACCEPT
+
+packet: 10.0.2.12 1.1.1.1 6 => DRPOP
+
+packet: 10.0.2.12 8.8.8.8 6 => ACCEPT
+
+packet: 10.0.3.13 1.2.2.3 17 => ACCEPT
+
+packet: 10.0.2.12 1.2.3.4 17 => DROP
+
+packet: 12.0.4.128/16 1.2.3.4 6 => ACCEPT
+
+packet: 1.1.1.128 10.0.9.1 6 => DROP
+
+packet: 10.0.5.0/24 10.0.11.1 17 => ACCEPT
+```
+
+Test 2 file input
+```
+packet: 10.0.1.11 1.1.1.1 6 => ACCEPT
+
+packet: 10.0.2.12 1.1.1.1 6 => DRPOP
+
+packet: 10.0.2.12 8.8.8.8 6 => ACCEPT
+
+packet: 10.0.3.13 1.2.2.3 17 => ACCEPT
+
+packet: 10.0.2.12 1.2.3.4 17 => DROP
+
+packet: 12.0.4.128/16 1.2.3.4 6 => ACCEPT
+
+packet: 1.1.1.128 10.0.9.1 6 => DROP
+
+packet: 10.0.5.0/24 10.0.11.1 17 => ACCEPT
+```
+
+Test 3 Console input (FTP, NTP)
+```
+packet: 128.2.2.1 64.64.64.64 21 => ACCEPT
+
+packet: 128.2.1.2 41.0.0.0 27 => ACCEPT
+
+packet: 128.1.1.1 1.64.64.64 27 => DROP
+```
