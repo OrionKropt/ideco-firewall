@@ -62,11 +62,11 @@ packet: 10.0.3.13 1.2.2.3 17 => ACCEPT
 
 packet: 10.0.2.12 1.2.3.4 17 => DROP
 
-packet: 12.0.4.128/16 1.2.3.4 6 => ACCEPT
+packet: 12.0.4.128 1.2.3.4 6 => ACCEPT
 
 packet: 1.1.1.128 10.0.9.1 6 => DROP
 
-packet: 10.0.5.0/24 10.0.11.1 17 => ACCEPT
+packet: 10.0.5.0 10.0.11.1 17 => ACCEPT
 ```
 
 Test 2 file input
@@ -81,11 +81,11 @@ packet: 10.0.3.13 1.2.2.3 17 => ACCEPT
 
 packet: 10.0.2.12 1.2.3.4 17 => DROP
 
-packet: 12.0.4.128/16 1.2.3.4 6 => ACCEPT
+packet: 12.0.4.128 1.2.3.4 6 => ACCEPT
 
 packet: 1.1.1.128 10.0.9.1 6 => DROP
 
-packet: 10.0.5.0/24 10.0.11.1 17 => ACCEPT
+packet: 10.0.5.0 10.0.11.1 17 => ACCEPT
 ```
 
 Test 3 Console input (FTP, NTP)
