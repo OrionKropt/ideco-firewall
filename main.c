@@ -36,6 +36,7 @@ int main(int argc, char** argv)
     return 0;
   }
 
+  
   if (argc > 1)
   {
     if(!strcmp(argv[1], "file"))
@@ -219,9 +220,10 @@ struct node* read_data_base_from_file()
   uint8_t u8_buf[8] = {0};  
   char buf[8];
   uint8_t new_rl = 1;
+  fscanf(f, "%s", buf);
   while (fscanf(f, "%s", buf) != EOF)
   {
-    memset(u8_buf, 0, 8);
+    memset(u8_buf, 0, sizeof(uint8_t) * 8);
     
     if (new_rl)
       {
