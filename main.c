@@ -16,8 +16,6 @@ uint8_t cheack_packet(const struct packet* pack, const struct rule* rl);
 
 void print_packet(const struct packet *pack);
 
-uint32_t get_bin_ip(const char* str); 
-
 char* get_standart_ip(const uint32_t ip);
 
 enum protocol pars_type_protocol(const char* prot);
@@ -80,7 +78,6 @@ int main(int argc, char** argv)
     if (is_drop)  printf("DRPOP\n");
 
     memset(pack, 0, sizeof(struct packet));
-    
   }
 
   if (is_read_file)
@@ -93,26 +90,18 @@ uint8_t read_packet(struct packet  *pack, uint8_t is_read_file, FILE* f)
 {
   uint8_t u8_buf[8] = {0};  
   uint32_t u32_buf[4] = {0};
-  //char buf[32];
   
   if (is_read_file)
     fscanf(f, "%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
-     // fscanf(f, "%s", buf);
   else
     scanf("%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
 
- // printf("%hhu.%hhu.%hhu.%hhu\n", u8_buf[0], u8_buf[1], u8_buf[2], u8_buf[3]);
-
-  //printf("%s\n", buf);
-  //printf("%b\n", u8_buf[0]);
-  //return 0;
   pack->ip_src.s_addr |= ((uint32_t) (u8_buf[0] << 24));
   pack->ip_src.s_addr |= ((uint32_t) (u8_buf[1] << 16));
   pack->ip_src.s_addr |= ((uint32_t) (u8_buf[2] << 8));
   pack->ip_src.s_addr |= (uint32_t) u8_buf[3];
   pack->mask_src |= (uint32_t) (~pack->mask_src) << (32 - u8_buf[4]);
   
-
   memset(u8_buf, 0, sizeof(uint8_t) * 8);
 
   if (is_read_file)
@@ -126,20 +115,19 @@ uint8_t read_packet(struct packet  *pack, uint8_t is_read_file, FILE* f)
   pack->ip_des.s_addr |= (uint32_t) u8_buf[3];
   pack->mask_des |= (uint32_t) (~pack->mask_des) << (32 - u8_buf[4]);
 
-  
-
-  if (is_read_file)
-  {
-    if (fscanf(f, "%u %u %u", &u32_buf[0], &u32_buf[1], &u32_buf[2]) == EOF)
+   if (is_read_file)
+   {
+      if (fscanf(f, "%u %u %u", &u32_buf[0], &u32_buf[1], &u32_buf[2]) == EOF)
       return 0;   
-  }
-  else
-    scanf("%u %u %u", &u32_buf[0], &u32_buf[1], &u32_buf[2]);
-   
+   }
+   else
+   {
+      scanf("%u %u %u", &u32_buf[0], &u32_buf[1], &u32_buf[2]);
+      if (u32_buf[2] == 0) return 0;
+   }
   pack->port_src = u32_buf[0];
   pack->port_des = u32_buf[1];
   pack->prot = u32_buf[2]; 
-
 
   return 1;
 }
@@ -149,9 +137,7 @@ uint8_t cheack_packet(const struct packet* pack, const struct rule* rl)
 {
   if (rl->pack.ip_src.s_addr)
   {
-    //printf("%d mask: %b != %d mask: %b\n", rl->pack.ip_src.s_addr, rl->pack.mask_src, pack->ip_src.s_addr, pack->mask_src);
-    
-    if ((rl->pack.ip_src.s_addr & rl->pack.mask_src) != (pack->ip_src.s_addr & pack->mask_src))
+     if ((rl->pack.ip_src.s_addr & rl->pack.mask_src) != (pack->ip_src.s_addr & pack->mask_src))
       return 0;
   }
   
@@ -166,9 +152,7 @@ uint8_t cheack_packet(const struct packet* pack, const struct rule* rl)
     if (rl->pack.prot != pack->prot)
       return 0;
   }
-
-  //printf("dada");
-  
+   
   return 1;
 }
 
@@ -222,7 +206,7 @@ struct node* read_data_base_from_file()
   struct rule* rl = NULL;
   FILE* f = fopen("data_base.txt", "r");
  
-   if (f == NULL)
+  if (f == NULL)
   {
     printf("Can't open file data_base.txt\n");
     return NULL;
@@ -275,7 +259,6 @@ struct node* read_data_base_from_file()
       strcpy(rl->response,  buf);
       new_rl = 1;
       push_back(&head, rl);
-      //printf("%s\n", rl->response);
     }
  } 
   
