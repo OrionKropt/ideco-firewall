@@ -2,7 +2,7 @@
 
 #include <netinet/in.h>
 
-enum protocol {UNDEFINED = 0, TCP = 6, UDP = 17 };
+enum protocol {UNDEFINED = 0, TCP = 6, UDP = 17, FTP = 21, NTP = 27 };
 
 struct packet
 {

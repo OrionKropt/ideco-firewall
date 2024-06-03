@@ -197,6 +197,10 @@ enum protocol pars_type_protocol(const char* prot)
   
   else if (!strcmp(prot, "udp")) return UDP;
 
+  else if (!strcmp(prot, "ftp")) return FTP;
+
+  else if (!strcmp(prot, "ntp")) return NTP;
+
   else return UNDEFINED;
 }
 

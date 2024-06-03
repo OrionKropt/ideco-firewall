@@ -6,3 +6,6 @@ none 			dst: 1.2.3.4 	proto: udp	=> DROP
 none 			dst: 1.2.3.4	none		=> ACCEPT
 none 			dst: 10.0.9.1	proto: tcp	=> DROP
 src: 10.0.5.0/24 	none			none		=> ACCEPT
+src: 128.2.2.1	dst: 64.64.64.64	proto: ftp	=> ACCEPT
+src: 128.2.1.2	none			proto: ntp  => ACCEPT
+none			dst: 1.64.64.64	proto: ntp	=> DROP
