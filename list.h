@@ -1,10 +1,16 @@
 #pragma once
 #include "packet.h"
 
+enum response {
+  UNDEFINED_RESPONSE = 0,
+  ACCEPT = 1,
+  DROP
+};
+
 struct rule
 {
   struct packet pack;
-  char response[16];
+  enum response resp;
 };
 
 struct node

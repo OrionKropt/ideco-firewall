@@ -1,3 +1,5 @@
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -10,66 +12,59 @@
 
 
 
-uint8_t read_packet(struct packet* pack, uint8_t is_read_file, FILE *f);
-
-uint8_t cheack_packet(const struct packet* pack, const struct rule* rl);
-
+uint8_t read_packet(struct packet *pack, FILE *f);
+uint8_t check_packet(const struct packet* pack, const struct rule* rl);
 void print_packet(const struct packet *pack);
-
-char* get_standart_ip(const uint32_t ip);
-
-enum protocol pars_type_protocol(const char* prot);
-
+void verdict(char *str, enum response resp); 
+void ip_to_str(char *str, const uint32_t ip);
+enum protocol parse_type_protocol(const char* prot);
+enum response parse_verdict(const char* verd);
 struct node* read_data_base_from_file();
 
 int main(int argc, char** argv)
 {
   struct node* data_base;
-  uint8_t is_read_file = 0;
+  char *verd = malloc(sizeof(char) * 16);
   struct packet *pack = NULL;
-  FILE* f = NULL;
-
+  FILE* f = stdin;
+  
   data_base = read_data_base_from_file();
+
   if (data_base == NULL)
   {
-    printf("Can't read data_base\n");
+    printf("Can't read database\n");
     return 0;
   }
 
-  
   if (argc > 1)
   {
     if(!strcmp(argv[1], "file"))
-      is_read_file = 1;
-  }
-
-  if (is_read_file)
-  {
-    f = fopen("tests.txt", "r");
-    if (f == NULL)
-    {
-      printf("Can't open tests.txt\n");
-      return 0;
-    }
-    char ch[8];
-    fscanf(f, "%s", ch);
+      {
+        f = fopen("tests.txt", "r");
+        if (f == NULL)
+        {
+          printf("Can't open file tests.txt: %s\n", strerror(errno));
+          return 0;
+        }
+      }
   }
 
   pack = malloc(sizeof(struct packet));
   memset(pack, 0, sizeof(struct packet));
   
-  while (read_packet(pack, is_read_file, f))
+  while (read_packet(pack, f))
   {
     uint8_t is_drop = 1;
     struct node *temp = data_base;
-
+    
     print_packet(pack);
     
     while (temp != NULL)
     {
-      if (cheack_packet(pack, &temp->rl))
+      if (check_packet(pack, &temp->rl))
       {
-        printf("%s\n", temp->rl.response);
+        verdict(verd, temp->rl.resp);
+        printf("%s\n", verd);
         is_drop = 0;
         break;
       }
@@ -77,55 +72,42 @@ int main(int argc, char** argv)
     }
     
     if (is_drop)  printf("DRPOP\n");
-
     memset(pack, 0, sizeof(struct packet));
-  }
+ }
 
-  if (is_read_file)
+  if (f != stdin)
     fclose(f);
+  
   return 0;
 }
 
 
-uint8_t read_packet(struct packet  *pack, uint8_t is_read_file, FILE* f)
+uint8_t read_packet(struct packet  *pack, FILE *f)
 {
-  uint8_t u8_buf[8] = {0};  
+  uint8_t u8_buf[4] = {0};  
   uint32_t u32_buf[4] = {0};
-  
-  if (is_read_file)
-    fscanf(f, "%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
-  else
-    scanf("%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
-
+  int8_t res = 0;
+  res = fscanf(f, "%hhu.%hhu.%hhu.%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3]);
+       
   pack->ip_src.s_addr |= ((uint32_t) (u8_buf[0] << 24));
   pack->ip_src.s_addr |= ((uint32_t) (u8_buf[1] << 16));
   pack->ip_src.s_addr |= ((uint32_t) (u8_buf[2] << 8));
   pack->ip_src.s_addr |= (uint32_t) u8_buf[3];
-  pack->mask_src |= (uint32_t) (~pack->mask_src) << (32 - u8_buf[4]);
   
-  memset(u8_buf, 0, sizeof(uint8_t) * 8);
+  memset(u8_buf, 0, sizeof(uint8_t) * 4);
 
-  if (is_read_file)
-    fscanf(f, "%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
-  else
-    scanf("%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
-  
+  res = fscanf(f, "%hhu.%hhu.%hhu.%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3]);
+     
   pack->ip_des.s_addr |= ((uint32_t) (u8_buf[0] << 24));
   pack->ip_des.s_addr |= ((uint32_t) (u8_buf[1] << 16));
   pack->ip_des.s_addr |= ((uint32_t) (u8_buf[2] << 8));
   pack->ip_des.s_addr |= (uint32_t) u8_buf[3];
-  pack->mask_des |= (uint32_t) (~pack->mask_des) << (32 - u8_buf[4]);
 
-   if (is_read_file)
-   {
-      if (fscanf(f, "%u %u %u", &u32_buf[0], &u32_buf[1], &u32_buf[2]) == EOF)
-      return 0;   
-   }
-   else
-   {
-      scanf("%u %u %u", &u32_buf[0], &u32_buf[1], &u32_buf[2]);
-      if (u32_buf[2] == 0) return 0;
-   }
+  res = fscanf(f, "%u %u %u", &u32_buf[0], &u32_buf[1], &u32_buf[2]);
+
+  if (res == EOF)
+    return 0;   
+  
   pack->port_src = u32_buf[0];
   pack->port_des = u32_buf[1];
   pack->prot = u32_buf[2]; 
@@ -134,17 +116,17 @@ uint8_t read_packet(struct packet  *pack, uint8_t is_read_file, FILE* f)
 }
 
 
-uint8_t cheack_packet(const struct packet* pack, const struct rule* rl)
+uint8_t check_packet(const struct packet* pack, const struct rule* rl)
 {
   if (rl->pack.ip_src.s_addr)
   {
-     if ((rl->pack.ip_src.s_addr & rl->pack.mask_src) != (pack->ip_src.s_addr & pack->mask_src))
+     if ((rl->pack.ip_src.s_addr & rl->pack.mask_src) != pack->ip_src.s_addr)
       return 0;
   }
   
   if (rl->pack.ip_des.s_addr)
   {
-    if ((rl->pack.ip_des.s_addr & rl->pack.mask_des) != (pack->ip_des.s_addr & pack->mask_des))
+    if ((rl->pack.ip_des.s_addr & rl->pack.mask_des) != pack->ip_des.s_addr)
       return 0;
   }
 
@@ -159,50 +141,46 @@ uint8_t cheack_packet(const struct packet* pack, const struct rule* rl)
 
 void print_packet(const struct packet *pack)
 {
-  char* ip_src = get_standart_ip((pack->ip_src.s_addr));
-  char* ip_des = get_standart_ip((pack->ip_des.s_addr));
-  uint8_t mask_src = __builtin_popcount(pack->mask_src);
-  uint8_t mask_des = __builtin_popcount(pack->mask_des);
+  char ip_src[32] = {0};
+  char ip_des[32] = {0};
+ 
+  ip_to_str(ip_src, pack->ip_src.s_addr);
+  ip_to_str(ip_des, pack->ip_des.s_addr);
   
-  printf("packet: %s", ip_src);
-  if (mask_src != 32)
-    printf("/%hhu ", mask_src);
-  else printf(" ");
-  
-  printf("%s", ip_des);
-  if (mask_des != 32)
-    printf("/%hhu ", mask_des);
-  else printf(" ");
-  
-  printf("%d => ", pack->prot);
-  free(ip_src);
-  free(ip_des);
+  printf("packet: %s %s %d => ", ip_src, ip_des, pack->prot);
 }
 
-char* get_standart_ip(const uint32_t ip)
+void verdict(char *str, enum response resp)
 {
-  char *ch_ip = malloc(sizeof(char) * 32);
+  if (resp == ACCEPT) strcpy(str, "ACCEPT");
+  else if (resp == DROP) strcpy(str, "DROP");
+  else strcpy(str, "UNDEFINED RESPONSE");
+}
+
+void ip_to_str(char *str, const uint32_t ip)
+{
   uint8_t buf[4];
-  
   buf[0] = (uint8_t) (ip >> 24);
   buf[1] = (uint8_t) (ip >> 16);
   buf[2] = (uint8_t) (ip >> 8);
   buf[3] = (uint8_t) (ip); 
-  sprintf(ch_ip, "%hhu.%hhu.%hhu.%hhu", buf[0], buf[1], buf[2], buf[3]);
-  return ch_ip;
+  sprintf(str, "%hhu.%hhu.%hhu.%hhu", buf[0], buf[1], buf[2], buf[3]);
 }
 
-enum protocol pars_type_protocol(const char* prot)
+enum protocol parse_type_protocol(const char* prot)
 {
   if (!strcmp(prot, "tcp")) return TCP;
-  
-  else if (!strcmp(prot, "udp")) return UDP;
+  if (!strcmp(prot, "udp")) return UDP;
+  if (!strcmp(prot, "ftp")) return FTP;
+  if (!strcmp(prot, "ntp")) return NTP;
+  return UNDEFINED;
+}
 
-  else if (!strcmp(prot, "ftp")) return FTP;
-
-  else if (!strcmp(prot, "ntp")) return NTP;
-
-  else return UNDEFINED;
+enum response parse_verdict(const char* verd)
+{
+  if (!strcmp(verd, "ACCEPT")) return ACCEPT;
+  if (!strcmp(verd, "DROP")) return DROP;
+  return UNDEFINED_RESPONSE;  
 }
 
 struct node* read_data_base_from_file()
@@ -213,62 +191,60 @@ struct node* read_data_base_from_file()
  
   if (f == NULL)
   {
-    printf("Can't open file data_base.txt\n");
+    printf("Can't open file data_base.txt: %s\n", strerror(errno));
     return NULL;
   }
   
   uint8_t u8_buf[8] = {0};  
-  char buf[8];
+  char buf[8] = {0};
   uint8_t new_rl = 1;
-  fscanf(f, "%s", buf);
+
   while (fscanf(f, "%s", buf) != EOF)
   {
     memset(u8_buf, 0, sizeof(uint8_t) * 8);
     
     if (new_rl)
-      {
-        rl = malloc(sizeof(struct rule));
-        new_rl = 0;
-      }
+    {
+      rl = malloc(sizeof(struct rule));
+      new_rl = 0;
+    }
     if (!strcmp(buf, "src:"))
     {
       
-  fscanf(f, "%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
+      fscanf(f, "%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
   
-    rl->pack.ip_src.s_addr |= ((uint32_t) (u8_buf[0] << 24));
-    rl->pack.ip_src.s_addr |= ((uint32_t) (u8_buf[1] << 16));
-    rl->pack.ip_src.s_addr |= ((uint32_t) (u8_buf[2] << 8));
-    rl->pack.ip_src.s_addr |= ((uint32_t) u8_buf[3]);
-    rl->pack.mask_src |= (uint32_t) (~rl->pack.mask_src) << (32 - u8_buf[4]);
+      rl->pack.ip_src.s_addr |= ((uint32_t) (u8_buf[0] << 24));
+      rl->pack.ip_src.s_addr |= ((uint32_t) (u8_buf[1] << 16));
+      rl->pack.ip_src.s_addr |= ((uint32_t) (u8_buf[2] << 8));
+      rl->pack.ip_src.s_addr |= ((uint32_t) u8_buf[3]);
+      rl->pack.mask_src |= (uint32_t) (~rl->pack.mask_src) << (32 - u8_buf[4]);
     }
     else if (!strcmp(buf, "dst:"))
     {
       
-  fscanf(f, "%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
+      fscanf(f, "%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
   
-    rl->pack.ip_des.s_addr |= ((uint32_t) (u8_buf[0] << 24));
-    rl->pack.ip_des.s_addr |= ((uint32_t) (u8_buf[1] << 16));
-    rl->pack.ip_des.s_addr |= ((uint32_t) (u8_buf[2] << 8));
-    rl->pack.ip_des.s_addr |= ((uint32_t) u8_buf[3]);
+      rl->pack.ip_des.s_addr |= ((uint32_t) (u8_buf[0] << 24));
+      rl->pack.ip_des.s_addr |= ((uint32_t) (u8_buf[1] << 16));
+      rl->pack.ip_des.s_addr |= ((uint32_t) (u8_buf[2] << 8));
+      rl->pack.ip_des.s_addr |= ((uint32_t) u8_buf[3]);
     
-    rl->pack.mask_des |= (uint32_t) (~rl->pack.mask_des) << (32 - u8_buf[4]);
+      rl->pack.mask_des |= (uint32_t) (~rl->pack.mask_des) << (32 - u8_buf[4]);
     }
-    
     else if (!strcmp(buf, "proto:"))
     {
       fscanf(f, "%s", buf);
-      rl->pack.prot = pars_type_protocol(buf);
+      rl->pack.prot = parse_type_protocol(buf);
     }
     else if (!strcmp(buf, "=>"))
     {
       fscanf(f, "%s", buf);
-      strcpy(rl->response,  buf);
+      rl->resp = parse_verdict(buf);    
       new_rl = 1;
       push_back(&head, rl);
     }
  } 
   
-
   fclose(f);
   return head;
 }
