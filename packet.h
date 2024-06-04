@@ -14,8 +14,6 @@ struct packet
 {
   struct in_addr ip_src;
   struct in_addr ip_des;
-  uint32_t mask_src;
-  uint32_t mask_des;
   in_port_t port_src;
   in_port_t port_des;
   enum  protocol prot;

@@ -118,21 +118,21 @@ uint8_t read_packet(struct packet  *pack, FILE *f)
 
 uint8_t check_packet(const struct packet* pack, const struct rule* rl)
 {
-  if (rl->pack.ip_src.s_addr)
+  if (rl->ip_src.s_addr)
   {
-     if ((rl->pack.ip_src.s_addr & rl->pack.mask_src) != pack->ip_src.s_addr)
+     if ((rl->ip_src.s_addr & rl->mask_src) != pack->ip_src.s_addr)
       return 0;
   }
   
-  if (rl->pack.ip_des.s_addr)
+  if (rl->ip_des.s_addr)
   {
-    if ((rl->pack.ip_des.s_addr & rl->pack.mask_des) != pack->ip_des.s_addr)
+    if ((rl->ip_des.s_addr & rl->mask_des) != pack->ip_des.s_addr)
       return 0;
   }
 
-  if (rl->pack.prot)
+  if (rl->prot)
   {
-    if (rl->pack.prot != pack->prot)
+    if (rl->prot != pack->prot)
       return 0;
   }
    
@@ -213,28 +213,28 @@ struct node* read_data_base_from_file()
       
       fscanf(f, "%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
   
-      rl->pack.ip_src.s_addr |= ((uint32_t) (u8_buf[0] << 24));
-      rl->pack.ip_src.s_addr |= ((uint32_t) (u8_buf[1] << 16));
-      rl->pack.ip_src.s_addr |= ((uint32_t) (u8_buf[2] << 8));
-      rl->pack.ip_src.s_addr |= ((uint32_t) u8_buf[3]);
-      rl->pack.mask_src |= (uint32_t) (~rl->pack.mask_src) << (32 - u8_buf[4]);
+      rl->ip_src.s_addr |= ((uint32_t) (u8_buf[0] << 24));
+      rl->ip_src.s_addr |= ((uint32_t) (u8_buf[1] << 16));
+      rl->ip_src.s_addr |= ((uint32_t) (u8_buf[2] << 8));
+      rl->ip_src.s_addr |= ((uint32_t) u8_buf[3]);
+      rl->mask_src |= (uint32_t) (~rl->mask_src) << (32 - u8_buf[4]);
     }
     else if (!strcmp(buf, "dst:"))
     {
       
       fscanf(f, "%hhu.%hhu.%hhu.%hhu/%hhu", &u8_buf[0], &u8_buf[1], &u8_buf[2], &u8_buf[3], &u8_buf[4]);
   
-      rl->pack.ip_des.s_addr |= ((uint32_t) (u8_buf[0] << 24));
-      rl->pack.ip_des.s_addr |= ((uint32_t) (u8_buf[1] << 16));
-      rl->pack.ip_des.s_addr |= ((uint32_t) (u8_buf[2] << 8));
-      rl->pack.ip_des.s_addr |= ((uint32_t) u8_buf[3]);
+      rl->ip_des.s_addr |= ((uint32_t) (u8_buf[0] << 24));
+      rl->ip_des.s_addr |= ((uint32_t) (u8_buf[1] << 16));
+      rl->ip_des.s_addr |= ((uint32_t) (u8_buf[2] << 8));
+      rl->ip_des.s_addr |= ((uint32_t) u8_buf[3]);
     
-      rl->pack.mask_des |= (uint32_t) (~rl->pack.mask_des) << (32 - u8_buf[4]);
+      rl->mask_des |= (uint32_t) (~rl->mask_des) << (32 - u8_buf[4]);
     }
     else if (!strcmp(buf, "proto:"))
     {
       fscanf(f, "%s", buf);
-      rl->pack.prot = parse_type_protocol(buf);
+      rl->prot = parse_type_protocol(buf);
     }
     else if (!strcmp(buf, "=>"))
     {
